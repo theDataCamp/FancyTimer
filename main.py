@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
-import pyautogui
+# import pyautogui
 import datetime
 import threading
+
+from PIL import ImageGrab
 
 
 class TimerApp:
@@ -98,8 +100,10 @@ class TimerApp:
         if self.screenshot_var.get():
             now = datetime.datetime.now()
             filename = now.strftime("%Y_%m_%d__%H_%M_%S.png")
-            screenshot = pyautogui.screenshot()
-            screenshot.save(filename)
+            img = ImageGrab.grab()
+            img.save(filename)
+            # screenshot = pyautogui.screenshot()
+            # screenshot.save(filename)
 
         FlashWindow(self.root)
 
