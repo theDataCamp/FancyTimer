@@ -46,6 +46,10 @@ class TimerApp:
         self.stop_button = ttk.Button(frame, text="Stop", command=self.on_stop, state=tk.DISABLED)
         self.stop_button.grid(row=row_num + 2, column=1, pady=20)
 
+        # Add a Pause/Unpause button
+        self.pause_button = ttk.Button(frame, text="Pause/Unpause", command=self.on_pause, state=tk.DISABLED)
+        self.pause_button.grid(row=row_num + 2, column=2, pady=20)
+
         # Checkbutton for screenshot option
         self.screenshot_check = ttk.Checkbutton(frame, text="Take Screenshot", variable=self.screenshot_var)
         self.screenshot_check.grid(row=row_num + 3, column=0, pady=10, columnspan=2)
@@ -58,16 +62,34 @@ class TimerApp:
         m = int(self.min_var.get())
         s = int(self.sec_var.get())
 
-        self.start_button['state'] = tk.DISABLED
-        self.stop_button['state'] = tk.NORMAL
+        if self.timer.paused:
+            self.timer.resume(self.update_display)
+        else:
+            self.start_button['state'] = tk.DISABLED
+            self.pause_button['state'] = tk.NORMAL
+            self.stop_button['state'] = tk.NORMAL
+            thread = threading.Thread(target=self.timer.start, args=(h, m, s, self.update_display))
+            thread.start()
 
-        thread = threading.Thread(target=self.timer.start, args=(h, m, s, self.update_display))
-        thread.start()
+    def on_pause(self):
+        self.timer.pause(self.update_display)
+        if self.timer.paused:
+            self.start_button['state'] = tk.DISABLED
+            self.stop_button['state'] = tk.NORMAL
+        else:
+            self.start_button['state'] = tk.DISABLED
+            self.stop_button['state'] = tk.NORMAL
 
     def on_stop(self):
         self.timer.stop()
+        # Reset spinboxes to user-set values
+        self.hour_var.set(self.hour_var.get())
+        self.min_var.set(self.min_var.get())
+        self.sec_var.set(self.sec_var.get())
+        self.update_display("00:00:00")
         self.start_button['state'] = tk.NORMAL
         self.stop_button['state'] = tk.DISABLED
+        self.pause_button['state'] = tk.DISABLED
 
     def update_display(self, time_str):
         self.time_display.config(text=time_str)
@@ -83,12 +105,13 @@ class TimerApp:
 
         self.start_button['state'] = tk.NORMAL
         self.stop_button['state'] = tk.DISABLED
+        self.pause_button['state'] = tk.DISABLED
 
 
 class FlashWindow:
     def __init__(self, master):
         self.window = tk.Toplevel(master)
-        self.window.geometry("200x200")
+        self.window.geometry("600x300")
         now = datetime.datetime.now()
         formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
         self.window.title(formatted_datetime)
@@ -110,16 +133,20 @@ class Timer:
     def __init__(self, callback):
         self.callback = callback
         self.stop_flag = False
+        self.paused = False
+        self.remaining = 0
 
     def start(self, hours, mins, secs, update_callback):
         self.total_seconds = hours * 3600 + mins * 60 + secs
         self.stop_flag = False
+        self.paused = False
         self.countdown(self.total_seconds, update_callback)
 
     def countdown(self, time_left, update_callback):
-        if self.stop_flag:
+        if self.stop_flag or self.paused:
             return
 
+        self.remaining = time_left
         mins, sec = divmod(time_left, 60)
         hours, mins = divmod(mins, 60)
         time_str = f"{hours:02}:{mins:02}:{sec:02}"
@@ -130,8 +157,22 @@ class Timer:
         else:
             self.root_after_id = root.after(1000, self.countdown, time_left - 1, update_callback)
 
+    def pause(self, update_callback=None):
+        if not self.paused:
+            self.paused = True
+        else:
+            self.paused = False
+            self.resume(update_callback)
+
+    def resume(self, update_callback):
+        self.stop_flag = False
+        self.paused = False
+        self.countdown(self.remaining, update_callback)
+
     def stop(self):
         self.stop_flag = True
+        self.remaining = 0
+        self.paused = False
         try:
             root.after_cancel(self.root_after_id)
         except AttributeError:
