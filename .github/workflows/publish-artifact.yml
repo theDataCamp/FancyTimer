@@ -35,6 +35,7 @@ jobs:
         else 
           echo "No requirements.txt yet."
         fi
+      shell: bash # This line ensures the script runs in bash
 
     - name: Debug List of Installed packages
       run: pip list
@@ -49,14 +50,14 @@ jobs:
       run: pyinstaller --onefile main.py
 
     - name: Upload Artifacts (Linux)
-      if: matrix.os == 'ubuntu-latest'
+      if: contains(matrix.os, 'ubuntu-latest')
       uses: actions/upload-artifact@v3
       with:
         name: Message_Sender_Linux
         path: ./dist/main
 
     - name: Upload Artifacts (Windows)
-      if: matrix.os == 'windows-latest'
+      if: contains(matrix.os, 'windows-latest')
       uses: actions/upload-artifact@v3
       with:
         name: Message_Sender_Windows
