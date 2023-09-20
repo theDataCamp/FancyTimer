@@ -4,9 +4,14 @@ on:
   push:
     branches:
       - master
+
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout Code
@@ -30,7 +35,7 @@ jobs:
         else 
           echo "No requirements.txt yet."
         fi
-      shell: bash
+
     - name: Debug List of Installed packages
       run: pip list
 
@@ -43,10 +48,18 @@ jobs:
     - name: Create Executable
       run: pyinstaller --onefile main.py
 
-    - name: Upload Artifacts
+    - name: Upload Artifacts (Linux)
+      if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v3
       with:
-        name: Message_Sender
+        name: Message_Sender_Linux
+        path: ./dist/main
+
+    - name: Upload Artifacts (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: Message_Sender_Windows
         path: .\dist\main.exe
 
     - name: Upload requirements.txt
